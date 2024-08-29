@@ -35,7 +35,7 @@ import {
 
 const Header: FC = () => {
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-orange-100 px-4 lg:h-[60px] lg:px-6">
+    <header className="flex h-14 items-center gap-4 border-b px-4 lg:h-[60px] lg:px-6">
       <Sheet>
         <SheetTrigger asChild>
           <Button
@@ -57,7 +57,7 @@ const Header: FC = () => {
               <span className="sr-only">Acme Inc</span>
             </Link>
             <Link
-              href="#"
+              href="/userprofile"
               className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
             >
               <Home className="h-5 w-5" />
@@ -113,8 +113,8 @@ const Header: FC = () => {
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
-        <form>
-          <div className="relative">
+        <form >
+          <div className="relative mx-auto">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
