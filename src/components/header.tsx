@@ -137,7 +137,7 @@ const Header: FC = () => {
           ))}
         </div>
        
-        <DropdownMenu c>
+        <DropdownMenu >
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full absolute top-0 right-6">
               <CircleUser className="h-5 w-5" />
