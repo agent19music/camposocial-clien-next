@@ -61,7 +61,7 @@ const CreateAccount: React.FC = () => {
       <Button variant="outline">{category ? category : "Open"}</Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent className="w-56">
-      <DropdownMenuLabel>Panel Position</DropdownMenuLabel>
+      <DropdownMenuLabel>Enrolled Course</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuRadioGroup value={category} onValueChange={setCategory}>
         <DropdownMenuRadioItem value="sw">Software Development</DropdownMenuRadioItem>
