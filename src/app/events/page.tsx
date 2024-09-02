@@ -77,6 +77,42 @@ export default function Dashboard() {
           dateCreated: "2024-08-24T08:25:00Z",
         },
       ];
+      const events = [
+        {
+          eventId: "1",
+          title: "Plant your own garden",
+          description: "Like plants so much you wanna love them? Pull up!",
+          date: "27/03/2024",
+          entry_fee: "500",
+          poster: "/eventposter.png",
+          username: "tayk47",
+          userimage: null,
+          comments: comments, // Assuming you want the same comments for each event
+        },
+        {
+          eventId: "2",
+          title: "Y2K Party",
+          description: "Early 2000s themed party. Pull up!",
+          date: "27/03/2024",
+          entry_fee: "500",
+          poster: "/y2kparty.png",
+          username: "oppaStompa",
+          userimage: "/wkndpfp.jpg",
+          comments: comments,
+        },
+        {
+          eventId: "3",
+          title: "Ramen",
+          description: "Vibe and slurp on ramen",
+          date: "27/03/2024",
+          entry_fee: "500",
+          poster: "/ramenposter.png",
+          username: "tayk47",
+          userimage: "/yoruichipfp.jpg",
+          comments: comments,
+        },
+      ];
+      
       const handleSubmit = (
         e: MouseEvent<HTMLButtonElement>, 
         eventId: string, 
@@ -121,7 +157,7 @@ export default function Dashboard() {
         }
       };
   return (
-   <div className="w-screen h-screen flex flex-col lg:container">
+   <div className="w-screen h-screen flex flex-col lg:container  p-4">
   <Header />
 
   {/* Main content with the two side navs and center content */}
@@ -131,7 +167,6 @@ export default function Dashboard() {
 
     {/* Center content */}
     <div className="flex-1 flex flex-col gap-4 p-4 lg:gap-6 lg:p-2 justify-center items-center ">
-      <h1 className="text-lg font-semibold md:text-2xl ">Events</h1>
       
       {/* Green area with centered input */}
       <div className="w-full flex-1   flex justify-center items-center">
@@ -148,43 +183,15 @@ export default function Dashboard() {
       </div>
       
       <div className="flex flex-col w-full max-w-6/12 rounded-lg border border-dashed shadow-sm overflow-y-auto lg:min-h-[800px] md:max-h-[537.6px]">
-        <EventCard
-          comments={comments}
-          poster="/eventposter.png"
-          description="Like plants so much you wanna love them? Pull up!"
-          date="27/03/2024"
-          entry_fee={'500'}
-          eventId="1"
-          title="Plant your own garden"
-          handleSubmit={handleSubmit}
-          username="tayk47"
-          userimage={null}
-        />
-        <EventCard
-          comments={comments}
-          poster="/y2kparty.png"
-          description="Early 2000s themed party. Pull up!"
-          date="27/03/2024"
-          entry_fee={'500'}
-          eventId="2"
-          title="Y2K Party"
-          handleSubmit={handleSubmit}
-          username="oppaStompa"
-          userimage="/wkndpfp.jpg"
-        />
-        <EventCard
-          comments={comments}
-          poster="/ramenposter.png"
-          description="Vibe and slurp on ramen"
-          date="27/03/2024"
-          entry_fee={'500'}
-          eventId="3"
-          title="Ramen"
-          handleSubmit={handleSubmit}
-          username="tayk47"
-          userimage="/yoruichipfp.jpg"
-        />
-      </div>
+  {events.map((event, index) => (
+    <EventCard
+      key={index}
+    {...event}
+    event={event}
+    />
+  ))}
+</div>
+
     </div>
 
     {/* Right SideNav */}
