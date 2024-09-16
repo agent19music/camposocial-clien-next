@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, ReactNode, useState, useEffect, useContext } from "react";
+import {nanoid} from 'nanoid';
+import { useRouter } from "next/navigation";
 
 interface EventContextProps {
   events: any[];
@@ -8,6 +10,20 @@ interface EventContextProps {
   isLoading: boolean;
   onchange: boolean;
   setOnchange: (value: boolean) => void;
+  navigateToSingleEventView : (event: Event) => void;
+  selectedEvent: Event | null;
+}
+
+// Yap interface to define the structure of each yap
+interface Event {
+  id: string;
+  images: [];
+  entryfee: number;
+  date: string;
+  comments: [];
+  user: [];
+  title: string;
+  description : string;
 }
 
 const defaultValue: EventContextProps = {
@@ -16,6 +32,8 @@ const defaultValue: EventContextProps = {
   isLoading: false,
   onchange: false,
   setOnchange: () => {},
+  navigateToSingleEventView: () => {},
+  selectedEvent: null
 };
 
 export const EventContext = createContext<EventContextProps>(defaultValue);
@@ -25,14 +43,17 @@ interface EventProviderProps {
 }
 
 export default function EventProvider({ children }: EventProviderProps) {
-  const apiEndpoint =
-    "http://vitapharm-server-env.eba-k5q68s3p.eu-north-1.elasticbeanstalk.com/api/vitapharm";
+    const apiEndpoint = "http://127.0.0.1:5000"; 
 
   const [isLoading, setIsLoading] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
   const [onchange, setOnchange] = useState(false);
   const [category, setCategory] = useState("Fun"); // Default category
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Initially no yap is selected
+
+
+  const router = useRouter()
 
   // Fetch events when the component mounts or when `onchange` changes
   useEffect(() => {
@@ -62,12 +83,31 @@ export default function EventProvider({ children }: EventProviderProps) {
     }
   }, [category, events]);
 
+  // Function to create a slug from yap id
+  function slugify(int: string) {
+    const baseSlug = int;
+    return `${baseSlug}-${nanoid(12)}`;
+  }
+
+  // Function to navigate to a single Yap view
+  function navigateToSingleEventView(event:Event) { 
+    const slug = slugify(event.eventId);
+    
+    setSelectedEvent(event);    
+  
+    router.push(`/events/${slug}`); // Navigate to the single product page
+    
+   
+  }
+
   const contextData = {
     events: filteredEvents,
     setCategory,
     isLoading,
     onchange,
     setOnchange,
+    navigateToSingleEventView,
+    selectedEvent
   };
 
   return (
