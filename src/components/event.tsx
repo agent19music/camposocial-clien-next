@@ -5,26 +5,32 @@ import { FC, useState } from "react";
 import CommentList from "./comment";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CircleUser } from "lucide-react";
-interface EventCardProps {
-  poster: string;
-  username: string;
-  userimage:string|null
-  title: string;
-  description: string;
-  date: string;
-  entry_fee: string;
-  comments: any[];
-  eventId: string;
-  handleSubmit: (e: React.MouseEvent<HTMLButtonElement>, eventId: string, comment: string) => void;
-}
+import { useContext } from "react";
+import { EventContext } from "@/context/eventcontext";
+// interface EventCardProps {
+//   poster: string;
+//   username: string;
+//   userimage:string|null
+//   title: string;
+//   description: string;
+//   date: string;
+//   entry_fee: string;
+//   comments: any[];
+//   eventId: string;
+//   handleSubmit: (e: React.MouseEvent<HTMLButtonElement>, eventId: string, comment: string) => void;
+//   event:
+// }
 
 
-const EventCard: FC<EventCardProps> = ({ poster, title, description, date, entry_fee, comments, eventId, handleSubmit, userimage, username }) => {
+const EventCard= ({ poster, title, description, date, entry_fee, comments, eventId, handleSubmit, userimage, username, event}) => {
   const [localCommentText, setLocalCommentText] = useState<string>("");
+  const {navigateToSingleEventView} = useContext(EventContext)
   
 
   return (
-    <Card className="my-4 p-6 shadow-lg rounded-lg max-w-4xl mx-auto relative">
+    <Card className="my-4 p-6 shadow-lg rounded-lg max-w-4xl mx-auto relative hover:cursor-pointer" 
+    onClick={() => navigateToSingleEventView(event)}
+    >
         
         <div className="absolute top-0 left-2 flex items-center space-x-2 p-2  ">
           <Avatar className="w-8 h-8 ">
