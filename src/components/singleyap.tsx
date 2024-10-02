@@ -7,6 +7,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Heart, MessageCircle, Repeat, Bookmark, MoreHorizontal } from 'lucide-react'
 import { Textarea } from "@/components/ui/textarea"
+import { useContext } from 'react'
+import { YapContext } from '@/context/yapcontext'
 
 const Tweet = ({ author, content, timestamp }) => (
   <Card className="mb-4">
@@ -160,23 +162,8 @@ const ReplyInput = ({ onReply }) => {
 }
 
 export default function Component() {
-  const [replies, setReplies] = useState([
-    {
-      author: "Alice Smith",
-      content: "Great point, John! I totally agree with your perspective.",
-      timestamp: "1h ago"
-    },
-    {
-      author: "Bob Johnson",
-      content: "I have a different view on this. Here's why...",
-      timestamp: "45m ago"
-    },
-    {
-      author: "Emma Wilson",
-      content: "This thread is really insightful. Thanks for sharing!",
-      timestamp: "30m ago"
-    }
-  ])
+  const selectedYap = useContext(YapContext)
+  const [replies, setReplies] = useState(selectedYap.replies)
 
   const handleNewReply = (content) => {
     const newReply = {
@@ -190,8 +177,8 @@ export default function Component() {
   return (
     <div className="max-w-2xl mx-auto p-4">
       <Tweet
-        author="John Doe"
-        content="This is the main tweet content. It's an interesting thought about something important!"
+        author={selectedYap.handle}
+        content={selectedYap.content}
         timestamp="2h ago"
       />
       <Separator className="my-4" />
