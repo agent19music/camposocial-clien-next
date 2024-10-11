@@ -8,6 +8,14 @@ interface User {
   username: string;
   password: string;
 }
+type currentUser = {
+  first_name: string
+  last_name: string
+  address: string
+  phone: string
+  email: string
+} | null
+
 
 // Define the AuthContext interface
 interface AuthContextType {
@@ -42,11 +50,12 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [currentUser, setCurrentUser] = useState(null)
   const [isLoading, setIsLoading] = useState(false);
   const [onChange, setOnChange] = useState(false)
-  const [authToken, setAuthToken] = useState(() =>
-    sessionStorage.getItem('authToken')
-      ? sessionStorage.getItem('authToken')
-      : null
-  )
+  const [authToken, setAuthToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('authToken');
+    }
+    return null;
+  });
   const router = useRouter();
 
   async function login(username: string, password: string, apiEndpoint: string) {
@@ -132,7 +141,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
               }
             })
         }
-      }, [authToken, onchange])
+      }, [authToken, onChange])
     
       const updateUserContext = () => {
         fetch(`${apiEndpoint}/authenticated_user`, {
