@@ -171,6 +171,8 @@ export default function YapProvider({ children }: YapProviderProps) {
       toast.error('An unexpected error occured')
     }
   };
+  console.log(yaps);
+  
 
   // The context data that will be passed down to components
   const contextData = {
