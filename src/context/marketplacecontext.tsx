@@ -7,10 +7,17 @@ import { useRouter } from "next/navigation";
 // Product interface to define the structure of each product
 interface Product {
   id: string;
+  average_rating: number;
+  category: string;
+  created_at: string;
   images: string[];
-  name: string;
+  title: string;
   brand: string;
   price: number;
+  sellerAvatar: string| null;
+  sellerIsVerified: boolean;
+  sellerName:string;
+  seller_id: string;
   description: string;
   rating: number;
   reviewsCount: number;
@@ -19,10 +26,19 @@ interface Product {
       avatar: string;
   };
   reviews: {
-      user: string;
+      username: string;
       rating: number;
-      comment: string;
+      text: string;
+      id: number;
+      avatar: string;
   }[];
+  variations: {
+    id: string;
+    name: string;
+    price: number;
+    stock: number;
+    value: string;
+}[];
   isBestseller?: boolean;
   isNew?: boolean;
 }
@@ -43,7 +59,9 @@ interface MarketplaceContextProps {
   products: Product[];
   isLoading: boolean;
   onchange: boolean;
+  isPayed: boolean;
   setOnchange: (value: boolean) => void;
+  setIsPayed : (value: boolean) => void;
   selectedProduct: Product | null; // Null when no product is selected
   setSelectedProduct: (product: Product | null) => void; // Setter function for selectedProduct
   navigateToSingleProductView: (product: Product) => void; // Add this to the interface
@@ -55,11 +73,13 @@ interface MarketplaceContextProps {
 const defaultValue: MarketplaceContextProps = {
   products: [],
   isLoading: false,
+  isPayed: false,
   onchange: false,
   selectedProduct: null,
   selectedSeller: null,
   setSelectedProduct: () => {}, // No-op function for default
   setSelectedSeller: () =>{},
+  setIsPayed: ()=> {},
   setOnchange: () => {},
   navigateToSingleProductView: () => {}, // No-op function for default
 };
@@ -78,6 +98,7 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
 
   // State declarations
   const [isLoading, setIsLoading] = useState(false);
+  const [isPayed, setIsPayed]= useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [onchange, setOnchange] = useState(false);
@@ -91,7 +112,7 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
   // Fetch yaps when the component mounts or when `onchange` changes
   useEffect(() => {
     setIsLoading(true);
-    fetch(`${apiEndpoint}/events`)
+    fetch(`${apiEndpoint}/products`)
       .then((res) => res.json())
       .then((data) => {
         setProducts(data);
@@ -107,9 +128,11 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
   }, [onchange]);
 
   // Function to create a slug from yap id
-  function slugify(int: string) {
+  function slugify(int: string): string {
     const baseSlug = int;
-    return `${baseSlug}-${nanoid(12)}`;
+    // Generate a nanoid without hyphens
+    const safeNanoid = nanoid(12).replace(/-/g, ''); 
+    return `${baseSlug}-${safeNanoid}`;
   }
 
   // Function to navigate to a single product view
@@ -142,7 +165,9 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
     setSelectedProduct,
     navigateToSingleProductView,
     navigateToSingleSellerView,
-    selectedSeller
+    selectedSeller,
+    isPayed,
+    setIsPayed
      // Include this in the context data
   };
 
