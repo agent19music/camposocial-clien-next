@@ -15,6 +15,7 @@ const nextConfig = {
             pathname: '/**', // This allows all paths under this hostname
           },
         ],
+        domains: ['m.media-amazon.com', 'ke.jumia.is'], 
       },
 };
 
