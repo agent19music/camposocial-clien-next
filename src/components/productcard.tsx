@@ -10,6 +10,8 @@ import { MarketplaceContext } from '@/context/marketplacecontext';
 
 export default function  ProductCard  ({ product })  {
 const {navigateToSingleProductView} = useContext(MarketplaceContext)
+console.log(product.reviews?.length);
+
   return (
     <Card className="w-[250px] border-none shadow-none hover:cursor-pointer"
     onClick={() => navigateToSingleProductView(product)}
@@ -45,21 +47,23 @@ const {navigateToSingleProductView} = useContext(MarketplaceContext)
           )}
         </div>
         <div className="mt-2 text-xs font-semibold uppercase">{product.brand}</div>
-        <h3 className="mt-1 text-sm font-medium line-clamp-2">{product.name}</h3>
+        <h3 className="mt-1 text-sm font-medium line-clamp-2">{product.title}</h3>
         <div className="mt-1 text-sm font-semibold">${product.price.toFixed(2)}</div>
         <div className="mt-1 flex items-center">
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
               className={`h-4 w-4 ${
-                i < Math.floor(product.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                i < Math.floor(product.average_rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
               }`}
             />
           ))}
-          <span className="ml-1 text-xs text-gray-600">({product.reviews.length})</span>
+      <span className="ml-1 text-xs text-gray-600">
+        ({product.reviews?.length > 0 ? product.reviews.length : 'no reviews yet'})
+      </span>
         </div>
         <Button className="w-full mt-2 text-white rounded-md">
-          Add to 444
+          Add to bag
         </Button>
       </CardContent>
     </Card>
