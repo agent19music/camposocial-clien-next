@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useContext, useEffect } from 'react'
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -6,117 +8,84 @@ import { MessageCircle, Repeat2, Heart, Share2 } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from 'next/navigation';
 import { YapContext } from '@/context/yapcontext'
+import { cn } from '@/lib/utils'
+import { MediaGrid } from './yapmediagrid'
 
-
-
-const YapCard = ({ display_name, username, content, avatar, media ,yap, likes_count, replies_count }) => {
+const YapCard = ({ display_name, username, content, avatar, media, yap, likes_count, replies_count }) => {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false)
   const { navigateToSingleYapView } = useContext(YapContext)
-  const [images, setImages] = React.useState([])
-  const [videos, setVideos] = React.useState([])
-
-
-  useEffect(() => {
-    if (media) {
-      const imagesArray:[] = [];
-      const videosArray:[] = [];
-
-      media.forEach(item => {
-        if (item.type === 'image') {
-          imagesArray.push(item);
-        } else if (item.type === 'video') {
-          videosArray.push(item);
-        }
-      });
-
-      setImages(imagesArray);
-      setVideos(videosArray);
-    }
-  }, [media]);
-
-  console.log(images);
-  
-
-  const renderMediaGrid = () => {
-    const mediaCount = (images?.length || 0) + (videos?.length || 0)
-    if (mediaCount === 0) return null
-
-    let gridClassName = "grid gap-2 mt-3"
-    if (mediaCount === 1) gridClassName += " grid-cols-1"
-    else if (mediaCount === 2) gridClassName += " grid-cols-2"
-    else if (mediaCount === 3) gridClassName += " grid-cols-2"
-    else gridClassName += " grid-cols-2"
-
-    return (
-      <div className={gridClassName}>
-        {images?.map((image, index) => (          
-          <div key={`image-${index}`} className={`relative rounded-xl max-h-32 overflow-hidden ${mediaCount === 3 && index === 0 ? 'row-span-2' : ''}`}>
-            <Image 
-              src={image.url} 
-              alt={`Yap media ${index + 1}`} 
-              layout="responsive"
-              width={200}
-              height={mediaCount === 1 ? 280 : 100}
-              objectFit="cover"
-            />
-          </div>
-        ))}
-        {videos?.map((video, index) => (
-          <div key={`video-${index}`} className="relative rounded-xl overflow-hidden max-h-32">
-            <video controls className="">
-              <source src={video.url} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        ))}
-      </div>
-    )
-  }
 
   return (
-    <Card className="mb-4 hover:bg-gray-50 transition-colors duration-200 hover:cursor-pointer" 
+    <Card 
+      className="border-b border-x-0 rounded-none first:border-t-0 hover:bg-gray-50 transition-colors duration-200 hover:cursor-pointer" 
       onClick={() => navigateToSingleYapView(yap, 'spc')}
     >
-      <CardHeader className="flex flex-row items-start space-y-0 pb-3">
-        <Avatar className="w-10 h-10 mr-3">
+      <CardHeader className="flex flex-row items-start space-y-0 pb-2 px-4 pt-3">
+        <Avatar className="w-10 h-10 mr-3 flex-shrink-0">
           <AvatarImage src={avatar} alt={display_name} />
           <AvatarFallback>{display_name[0]}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex-1 min-w-0 flex flex-col">
-            <h3 className="font-bold text-sm truncate">{display_name}</h3>
-            <p className="text-sm text-muted-foreground truncate">@{username}</p>
+          <div className="flex items-center gap-1">
+            <h3 className="font-bold text-[15px] truncate">{display_name}</h3>
+            <p className="text-[15px] text-muted-foreground truncate">@{username}</p>
           </div>
-          <p className="text-md mt-1 break-words">{content}</p>
+          <p className="text-[15px] break-words">{content}</p>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 pb-3">
-        {renderMediaGrid()}
+      <CardContent className="pt-0 pb-2 px-4">
+        <MediaGrid media={media} />
       </CardContent>
 
-      <CardFooter className="flex justify-between py-2 px-4 border-t">
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-          <MessageCircle className="w-4 h-4 mr-1" />
-          <span className="text-xs">{replies_count}</span>
-        </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-green-500">
-          <Repeat2 className="w-4 h-4 mr-1" />
-          <span className="text-xs">3.1K</span>
+      <CardFooter className="flex justify-between py-2 px-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-muted-foreground hover:text-primary group p-2 h-8"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MessageCircle className="w-[18px] h-[18px] mr-2 group-hover:text-primary" />
+          <span className="text-sm group-hover:text-primary">{replies_count}</span>
         </Button>
         <Button 
           variant="ghost" 
           size="sm" 
-          className={`${isLiked ? 'text-red-500' : 'text-muted-foreground'} hover:text-red-500`}
-          onClick={() => setIsLiked(!isLiked)}
+          className="text-muted-foreground hover:text-green-500 group p-2 h-8"
+          onClick={(e) => e.stopPropagation()}
         >
-          <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-          <span className="text-xs">{likes_count}</span>
+          <Repeat2 className="w-[18px] h-[18px] mr-2 group-hover:text-green-500" />
+          <span className="text-sm group-hover:text-green-500">3.1K</span>
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-          <Share2 className="w-4 h-4 mr-1" />
-          <span className="text-xs">Share</span>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "group p-2 h-8",
+            isLiked ? "text-red-500" : "text-muted-foreground hover:text-red-500"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsLiked(!isLiked);
+          }}
+        >
+          <Heart 
+            className={cn(
+              "w-[18px] h-[18px] mr-2",
+              isLiked ? "fill-current" : "group-hover:text-red-500"
+            )} 
+          />
+          <span className="text-sm group-hover:text-red-500">{likes_count}</span>
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-muted-foreground hover:text-primary group p-2 h-8"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Share2 className="w-[18px] h-[18px] mr-2 group-hover:text-primary" />
+          <span className="text-sm group-hover:text-primary">Share</span>
         </Button>
       </CardFooter>
     </Card>
