@@ -1,66 +1,181 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { ShoppingCart, X, Plus, Minus } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
+import { useState, useEffect, useRef, useContext } from 'react';
+import { ShoppingCart, X, Plus, Minus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { AuthContext } from '@/context/authcontext';
+import {toast} from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
-type CartItem = {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image: string
+interface CartItem {
+  product_title: string;
+  quantity: number;
+  price_per_item: number;
+  total_item_price: number;
+  images: string[];
+  id: string;
+}
+
+interface CartResponse {
+  cart_items: CartItem[];
 }
 
 export default function CartComponent() {
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { id: 1, name: "Product 1", price: 19.99, quantity: 2, image: "/placeholder.svg?height=80&width=80" },
-    { id: 2, name: "Product 2", price: 29.99, quantity: 1, image: "/placeholder.svg?height=80&width=80" },
-  ])
-  const cartRef = useRef<HTMLDivElement>(null)
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const cartRef = useRef<HTMLDivElement>(null);
 
-  const toggleCart = () => setIsCartOpen(!isCartOpen)
+  const router = useRouter()
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, quantity: Math.max(0, newQuantity) } : item
-      ).filter(item => item.quantity > 0)
-    )
+  const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+
+  function takeMeToCheckout (){
+    return router.push('/marketplace/checkout')
   }
 
-  const removeItem = (id: number) => {
-    setCartItems(items => items.filter(item => item.id !== id))
-  }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const {currentUser} = useContext(AuthContext);
+  
+
+  const getCartItems = async (userId: string): Promise<CartItem[]> => {
+    try {
+      const response = await fetch(`${apiEndpoint}/cart/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch cart data');
+      }
+      const data: CartResponse = await response.json();
+      return data.cart_items;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    
+    const fetchCartItems = async () => {
+      setLoading(true);
+      const items = await getCartItems(currentUser?.id);
+      setCartItems(items);
+      setLoading(false);
+    };
+    fetchCartItems();
+  }, [currentUser]);
+
+  const toggleCart = () => setIsCartOpen(!isCartOpen);
+
+  const removeItem = async (id: string) => {
+    try {
+      const response = await fetch(`${apiEndpoint}/cart/remove_item`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemId: id }),
+      });
+  
+      if (response.ok) {
+        setCartItems(items => items.filter(item => item.id !== id));
+      } else {
+        toast.error('Failed to remove item');
+      }
+    } catch (error) {
+      toast.error('Error removing item');
+    }
+  };
+
+  const incrementQuantity = async (id: string, currentQuantity: number) => { // Add currentQuantity as a parameter
+    try {
+      console.log(JSON.stringify({ itemId: id, quantity: currentQuantity + 1 }));
+      
+      const response = await fetch(`${apiEndpoint}/cart/update_quantity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemId: id, quantity: currentQuantity + 1 }), 
+      });
+  
+      if (response.ok) {
+        const updatedItem = await response.json();
+        setCartItems(items =>
+          items.map(item => (item.id === id ? { ...item, quantity: updatedItem.quantity } : item))
+        );
+      } else {
+        toast.error('Failed to increment quantity');
+      }
+    } catch (error) {
+      toast.error('Error incrementing quantity');
+    }
+  };
+  
+  const decrementQuantity = async (id: string, currentQuantity: number) => { // Add currentQuantity as a parameter
+    if (currentQuantity === 1) {
+      removeItem(id);
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://localhost:5000/cart/update_quantity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemId: id, quantity: currentQuantity - 1 }),
+      });
+  
+      if (response.ok) {
+        const updatedItem = await response.json();
+        setCartItems(items =>
+          items.map(item => (item.id === id ? { ...item, quantity: updatedItem.quantity } : item))
+        );
+      } else {
+        toast.error('Failed to decrement quantity');
+      }
+    } catch (error) {
+      toast.error('Error decrementing quantity:');
+    }
+  };
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price_per_item * item.quantity, 0);
+
+  useEffect(() => {
+    const newTotalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    setTotalItems(newTotalItems);
+  }, [cartItems]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
-        setIsCartOpen(false)
+        setIsCartOpen(false);
       }
-    }
+    };
 
     if (isCartOpen) {
-      document.addEventListener('mousedown', handleOutsideClick)
+      document.addEventListener('mousedown', handleOutsideClick);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
-    }
-  }, [isCartOpen])
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isCartOpen]);
 
   return (
     <div className="relative">
       <Button
         onClick={toggleCart}
-        className="fixed top-4 right-4 z-50"
-        aria-label="Toggle cart"
+        className="fixed bottom-6 right-6 z-50 rounded-full w-16 h-16 shadow-lg  sm:bottom-12"
+        aria-label={`Toggle cart, ${totalItems} items`}
       >
         <ShoppingCart className="h-6 w-6" />
+        {totalItems > 0 && (
+          <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+            {totalItems}
+          </span>
+        )}
       </Button>
 
       <div 
@@ -83,22 +198,22 @@ export default function CartComponent() {
               <div key={item.id} className="flex items-center justify-between mb-4 pb-4 border-b">
                 <div className="flex items-center">
                   <Image
-                    src={item.image}
-                    alt={item.name}
+                    src={item.images[0]} // Displaying the first image
+                    alt={item.product_title}
                     width={80}
                     height={80}
                     className="rounded-md mr-4"
                   />
                   <div>
-                    <h3 className="font-medium">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                    <h3 className="font-medium">{item.product_title}</h3>
+                    <p className="text-sm text-muted-foreground">${item.price_per_item.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => decrementQuantity(item.id, item.quantity)} 
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
@@ -107,7 +222,7 @@ export default function CartComponent() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => incrementQuantity(item.id, item.quantity)}
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
@@ -131,12 +246,12 @@ export default function CartComponent() {
               <span className="font-semibold">Subtotal:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
-            <Button className="w-full" onClick={() => alert('Proceeding to checkout')}>
+            <Button className="w-full" onClick={() => takeMeToCheckout()}>
               Proceed to Checkout
             </Button>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
