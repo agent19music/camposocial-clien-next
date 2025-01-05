@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+'use client'
+import { useState, useEffect, useContext } from 'react'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -6,69 +7,180 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { AuthContext } from '@/context/authcontext'
+import { toast } from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import CardsPaymentMethod from './paymentcard'
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import * as z from "zod"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 
-type CartItem = {
-  id: string
-  name: string
-  price: number
-  quantity: number
-  image: string
+interface CartItem {
+  product_title: string;
+  quantity: number;
+  price_per_item: number;
+  total_item_price: number;
+  images: string[];
+  id: string;
 }
 
 type CurrentUser = {
-  firstName: string
-  lastName: string
-  address: string
-  phone: string
-  email: string
+  id: string;
+  first_name: string;
+  last_name: string;
+  address: string;
+  phone: string;
+  email: string;
 } | null
 
-const cartItems: CartItem[] = [
-  { id: '1', name: 'Product 1', price: 19.99, quantity: 2, image: '/placeholder.svg?height=80&width=80' },
-  { id: '2', name: 'Product 2', price: 29.99, quantity: 1, image: '/placeholder.svg?height=80&width=80' },
-  { id: '3', name: 'Product 3', price: 39.99, quantity: 3, image: '/placeholder.svg?height=80&width=80' },
-  { id: '4', name: 'Product 4', price: 49.99, quantity: 1, image: '/placeholder.svg?height=80&width=80' },
-  { id: '5', name: 'Product 5', price: 59.99, quantity: 2, image: '/placeholder.svg?height=80&width=80' },
-]
-
-const currentUser: CurrentUser = {
-  firstName: 'John',
-  lastName: 'Doe',
-  address: '123 Main St, Anytown, AN 12345',
-  phone: '(555) 123-4567',
-  email: 'john.doe@example.com',
+interface CartResponse {
+  cart_items: CartItem[];
 }
 
+// Form validation schema
+const orderSchema = z.object({
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  address: z.string().min(1, "Address is required"),
+  total_price: z.number().min(0, "Total price error"),
+})
+
 export default function CheckoutComponent() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    address: '',
-    phone: '',
-    email: '',
+  const router = useRouter()
+  const { currentUser, authToken } = useContext(AuthContext)
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [showPayNow, setShowPayNow] = useState(false);
+  const [paymentReference, setPaymentReference] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+
+  const handlePayNow = () => {
+    setIsPaymentDialogOpen(true);
+  };
+
+  
+  const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT
+
+  const form = useForm<z.infer<typeof orderSchema>>({
+    resolver: zodResolver(orderSchema),
+    defaultValues: {
+      first_name: currentUser?.first_name || "",
+      last_name: currentUser?.last_name || "",
+      email: currentUser?.email || "",
+      phone: currentUser?.phone || "",
+      address: currentUser?.address || "",
+      total_price : 0,
+    },
   })
 
-  useEffect(() => {
-    if (currentUser) {
-      setFormData(currentUser)
+  const getCartItems = async (userId: string): Promise<CartItem[]> => {
+    try {
+      const response = await fetch(`${apiEndpoint}/cart/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch cart data');
+      }
+      const data: CartResponse = await response.json();
+      return data.cart_items;
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch cart items");
+      return [];
     }
-  }, [])
+  }; 
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
-    }))
+  useEffect(() => {
+    if (currentUser?.id) {
+      const fetchCartItems = async () => {
+        setLoading(true);
+        const items = await getCartItems(currentUser.id);
+        setCartItems(items);
+        setLoading(false);
+      };
+      fetchCartItems();
+    }
+  }, [currentUser]);
+
+  const onSubmit = async (values: z.infer<typeof orderSchema>) => {
+    try {
+      console.log("Form Values:", { ...values, total_price: totalPrice });
+      setIsSubmitting(true);
+      
+      if (!authToken) {
+        toast.error("Please log in to place an order");
+        return;
+      }
+
+      const response = await fetch(`${apiEndpoint}/create_order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ ...values, total_price: totalPrice }),
+      });
+
+      const data = await response.json();     
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create order');
+      }
+
+      toast.success("Order created successfully!");
+      setOrderId(data.order_id);
+      setShowPayNow(true);
+      
+      // Redirect to order confirmation page
+      // router.push(`/orders/${data.order_id}`);
+
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create order");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    // Simulate Paystack payment process
+    const simulatedReference = `REF-${Date.now()}`;
+    setPaymentReference(simulatedReference);
+
+    try {
+      const response = await fetch(`${apiEndpoint}/confirm_payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ order_id: orderId, payment_reference: simulatedReference }),
+      });
+
+      if (!response.ok) throw new Error('Failed to confirm payment');
+
+      toast.success("Payment successful!");
+      router.push(`/orders/${orderId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Payment failed");
+    }
+  };
+
+  const totalPrice = cartItems.reduce((sum, item) => sum + item.price_per_item * item.quantity, 0)
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-[400px]">Loading...</div>
   }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Submitting order with form data:', formData)
-    // Here you would typically send this data to your backend
-  }
-
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -83,17 +195,17 @@ export default function CheckoutComponent() {
               {cartItems.map(item => (
                 <div key={item.id} className="flex items-center mb-4">
                   <Image
-                    src={item.image}
-                    alt={item.name}
+                    src={item.images[0]}
+                    alt={item.product_title}
                     width={80}
                     height={80}
                     className="rounded-md mr-4"
                   />
                   <div className="flex-grow">
-                    <h3 className="font-semibold">{item.name}</h3>
+                    <h3 className="font-semibold">{item.product_title}</h3>
                     <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                   </div>
-                  <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+                  <span className="font-semibold">${(item.price_per_item * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
             </ScrollArea>
@@ -108,71 +220,103 @@ export default function CheckoutComponent() {
           <CardHeader>
             <CardTitle>Your Information</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <CardContent>
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
+                  
+                  <FormField
+                    control={form.control}
                     name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your shipping address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
+
+                  <FormField
+                    control={form.control}
                     name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="tel" placeholder="Enter your phone number" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
+
+                  <FormField
+                    control={form.control}
                     name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" disabled />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-              </div>
+              </CardContent>
+              <CardFooter>
+              {!showPayNow ? (
+                  <Button className="w-full" type="submit" disabled={isSubmitting || cartItems.length === 0}>
+                    {isSubmitting ? "Processing..." : "Place Order"}
+                  </Button>
+                ) : (
+                  <>
+                  <Button className="w-full bg-green-600 hover:bg-green-500" type='button' onClick={handlePayNow}>
+                    Pay Now
+                  </Button>
+                     <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                     <DialogContent>
+                       <DialogTitle>Complete Payment</DialogTitle>
+                       <CardsPaymentMethod />
+                     </DialogContent>
+                   </Dialog>
+                   </>
+                )}
+              </CardFooter>
             </form>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" type="submit" onClick={handleSubmit}>
-              Place Order
-            </Button>
-          </CardFooter>
+          </Form>
         </Card>
       </div>
     </div>
