@@ -63,7 +63,7 @@ console.log(product.reviews?.length);
       </span>
         </div>
         <Button className="w-full mt-2 text-white rounded-md">
-          Add to bag
+        View
         </Button>
       </CardContent>
     </Card>
