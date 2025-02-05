@@ -5,6 +5,7 @@ import { ShoppingCart, X, Plus, Minus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { AuthContext } from '@/context/authcontext';
+import { MarketplaceContext } from '@/context/marketplacecontext';
 import {toast} from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -38,6 +39,7 @@ export default function CartComponent() {
 
 
   const {currentUser} = useContext(AuthContext);
+  const {updateCart} = useContext(MarketplaceContext);
   
 
   const getCartItems = async (userId: string): Promise<CartItem[]> => {
@@ -63,7 +65,7 @@ export default function CartComponent() {
       setLoading(false);
     };
     fetchCartItems();
-  }, [currentUser]);
+  }, [currentUser, updateCart]);
 
   const toggleCart = () => setIsCartOpen(!isCartOpen);
 
