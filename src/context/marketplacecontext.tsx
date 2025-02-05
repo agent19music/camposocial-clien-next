@@ -3,6 +3,9 @@
 import { createContext, ReactNode, useState, useEffect, useContext } from "react";
 import { nanoid } from "nanoid";
 import { useRouter } from "next/navigation";
+import { AuthContext } from "./authcontext";
+import { get } from "http";
+import { set } from "date-fns";
 
 // Product interface to define the structure of each product
 interface Product {
@@ -67,6 +70,12 @@ interface MarketplaceContextProps {
   navigateToSingleProductView: (product: Product) => void; // Add this to the interface
   setSelectedSeller : (seller: Seller | null) => void;
   selectedSeller: Seller | null;
+  updateCart: boolean;
+  setUpdateCart: (value: boolean) => void;
+  navigationToSingleSellerView: (seller: Seller) => void;
+  getLatestOrderId: () => Promise<number | null>;
+  setOrderId: (value: string | null) => void;
+  orderId: string | null;
 }
 
 // Default values for the context
@@ -82,6 +91,12 @@ const defaultValue: MarketplaceContextProps = {
   setIsPayed: ()=> {},
   setOnchange: () => {},
   navigateToSingleProductView: () => {}, // No-op function for default
+  setUpdateCart: () => {},
+  updateCart: false,
+  navigationToSingleSellerView: () => {},
+  getLatestOrderId: async () => null,
+  setOrderId: () => {},
+  orderId: null
 };
 
 // Create the MarketplaceContext with default values
@@ -95,6 +110,7 @@ interface MarketplaceProviderProps {
 // MarketplaceProvider component to wrap the application
 export default function MarketplaceProvider({ children }: MarketplaceProviderProps) {
   const apiEndpoint = "http://127.0.0.1:5000"; 
+  const {authToken} = useContext(AuthContext); // Get the authToken from the AuthContext
 
   // State declarations
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +121,9 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
   const [category, setCategory] = useState("Fun"); // Default category
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null); 
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null); // Initially no yap is selected
+  const [updateCart, setUpdateCart] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+
 
 
   const router = useRouter(); // Initialize the router
@@ -145,6 +164,24 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
 
   }
 
+  async function getLatestOrderId() {
+    const response = await fetch(`${apiEndpoint}/get_latest_order_id`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Failed to get latest order');
+      return null;
+    }
+
+    const data = await response.json();
+    return data;
+   }
+
    // Function to navigate to a single seller view
    function navigateToSingleSellerView(seller:Seller ) {    
     const slug = slugify(seller.id);
@@ -167,8 +204,15 @@ export default function MarketplaceProvider({ children }: MarketplaceProviderPro
     navigateToSingleSellerView,
     selectedSeller,
     isPayed,
-    setIsPayed
-     // Include this in the context data
+    setIsPayed,
+    updateCart,
+    setUpdateCart,
+    setSelectedSeller,
+    getLatestOrderId,
+    setOrderId,
+    orderId
+    
+    // Include this in the context data
   };
 
   // Render the provider and pass the context data
