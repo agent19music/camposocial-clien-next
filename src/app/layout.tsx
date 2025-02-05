@@ -7,6 +7,7 @@ import MarketplaceProvider from "@/context/marketplacecontext";
 import UserProvider from "@/context/usercontext";
 import AuthProvider from "@/context/authcontext";
 import { Toaster } from "react-hot-toast";
+import ChatProvider from "@/context/chatcontext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -51,7 +52,11 @@ export default function RootLayout({
 />        <UserProvider>
         <MarketplaceProvider>
         <EventProvider>
-        <YapProvider>{children}</YapProvider>
+        <YapProvider>
+          <ChatProvider>
+          {children}
+          </ChatProvider>
+          </YapProvider>
         </EventProvider>
         </MarketplaceProvider></UserProvider></AuthProvider>
       </body>  
