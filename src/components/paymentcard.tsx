@@ -25,14 +25,23 @@ import { ApplePayModal } from "@/modals/paymentcard/applepay"
 import { PayPalModal } from "@/modals/paymentcard/paypal"
 import { MarketplaceContext } from "@/context/marketplacecontext"
 import { useRouter } from "next/navigation"
+import { AuthContext } from "@/context/authcontext"
+import {toast} from 'react-hot-toast'
 
 export default function CardsPaymentMethod() {
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [isApplePayModalOpen, setIsApplePayModalOpen] = useState(false)
   const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false)
   const router = useRouter()
+  const apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+   const {authToken} = useContext(AuthContext)
+   const {isPayed, setIsPayed, orderId} = useContext(MarketplaceContext)
 
-  const {isPayed, setIsPayed} = useContext(MarketplaceContext)
+
+   interface PaymentResponse {
+    authorization_url: string;
+    reference: string;
+  }
 
   const handlePaymentMethodChange = (value: string) => {
     setPaymentMethod(value)
@@ -42,9 +51,47 @@ export default function CardsPaymentMethod() {
       setIsPayPalModalOpen(true)
     }
   }
-  const handleContinue = () => {
-    setIsPayed(true)
-    router.push(`/marketplace/checkout/receipts`)
+
+  const handlePaystackPayment = async () => {
+    
+    try {
+      // Fetch the payment initialization
+      const response = await fetch(`${apiEndpoint}/paystack/initialize_payment`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_id: orderId,
+        }),
+      });
+  
+      // If the response is not ok, throw an error
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to initialize payment');
+      }
+  
+      const data = await response.json();
+  
+      // Handle the payment URL and reference if needed
+      if (data?.authorization_url) {
+        // Show success toast
+        toast.success('Payment initialized successfully! Redirecting...');
+        
+        // Redirect to Paystack for payment
+        window.location.href = data.authorization_url;
+      } else {
+        throw new Error('Authorization URL not found');
+      }
+    } catch (err: any) {
+      // Show error toast
+      toast.error(err.message || 'An error occurred during payment initialization.');
+  
+      console.error('Payment initialization failed:', err);
+    } finally {
+    }
   };
 
   return (
@@ -183,7 +230,7 @@ export default function CardsPaymentMethod() {
           )}
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={handleContinue}>Continue</Button>
+          <Button className="w-full" onClick={handlePaystackPayment}>Continue</Button>
         </CardFooter>
       </Card>
       <ApplePayModal 
