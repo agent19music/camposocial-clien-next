@@ -7,8 +7,10 @@ import {toast} from 'react-hot-toast'
 interface User {
   username: string;
   password: string;
+  onAuthChange: boolean;
 }
 type currentUser = {
+  id: string
   first_name: string
   last_name: string
   address: string
@@ -26,6 +28,7 @@ interface AuthContextType {
   currentUser: [] | null;
   authToken : string | null;
   updateUserContext: () => void; 
+  onAuthChange: boolean;
 
 }
 
@@ -37,7 +40,8 @@ export const AuthContext = createContext<AuthContextType>({
   currentUser : [],
   authToken: null,
   updateUserContext: () => {},
-  sellerlogin: ()=> {}
+  sellerlogin: ()=> {},
+  onAuthChange: false
 });
 
 interface AuthProviderProps {
@@ -49,7 +53,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 //   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState(null)
   const [isLoading, setIsLoading] = useState(false);
-  const [onChange, setOnChange] = useState(false)
+  const [onAuthChange, setOnAuthChange] = useState(false)
   const [authToken, setAuthToken] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('authToken');
@@ -74,7 +78,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         sessionStorage.setItem('authToken', data.access_token);
         setAuthToken(data.access_token);
         toast.success('Welcome back');
-        setOnChange(!onChange)
+        setOnAuthChange(!onAuthChange)
         router.push('/yaps')
       } else {
         toast.error('Invalid username or password');
@@ -100,7 +104,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
           sessionStorage.setItem('authToken', response.access_token);
           setAuthToken(response.access_token);
           toast.success("You are now logged in."); // Success toast
-          setOnChange(!onChange);
+          setOnAuthChange(!onAuthChange);
           router.push('/products');
         } else {
           toast.error("Incorrect username or password"); // Error toast
@@ -118,7 +122,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     sessionStorage.removeItem('authToken')
     setCurrentUser(null)
     setAuthToken(null)
-    setOnChange(!onChange)
     router.push('/login')
   }
 
@@ -141,7 +144,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
               }
             })
         }
-      }, [authToken, onChange])
+      }, [authToken, onAuthChange])
     
       const updateUserContext = () => {
         fetch(`${apiEndpoint}/authenticated_user`, {
@@ -171,7 +174,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     updateUserContext,
     login,
     logout,
-    sellerlogin
+    sellerlogin,
+    onAuthChange
   };
 
   return (
