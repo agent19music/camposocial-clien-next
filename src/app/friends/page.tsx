@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useContext, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,11 +23,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { MoreHorizontal, MessageCircle, UserPlus, Search } from "lucide-react"
-import {  Home, Calendar, PartyPopper } from 'lucide-react'
+import { MoreHorizontal, MessageCircle, UserPlus, Search } from 'lucide-react'
+import { Home, Calendar, PartyPopper, Users, UserPlus2, Bell } from 'lucide-react'
 import Header from '@/components/header'
 import SideNav from '@/components/sidenav'
-
+import { UserContext } from "@/context/usercontext"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ReceivedRequestsModal } from "@/modals/friends/friendrequests"
 
 interface Friend {
   id: number
@@ -41,7 +43,10 @@ interface Suggestion {
   username: string
   photoUrl: string
   mutualFriends: number
+  friendshipStatus: 'none' | 'friend' | 'request_sent' | 'request_received'
 }
+
+
 
 interface User {
   id: number
@@ -49,13 +54,21 @@ interface User {
   photoUrl: string
 }
 
-const FriendCard = ({ friend }: { friend: Friend }) => {
-  const [showAlert, setShowAlert] = useState<"unfriend" | "block" | null>(null)
- 
+interface FriendRequest {
+  id: number;
+  username: string;
+  photoUrl: string;
+}
 
+const FriendCard = ({ friend, removeFriend, blockFriend }: { friend: Friend, removeFriend: (id: number) => void, blockFriend: (id: number) => void }) => {
+  const [showAlert, setShowAlert] = useState<"unfriend" | "block" | null>(null)
+
+  const handleBlock = (friendId: number) => {
+    // Handle block action here
+    blockFriend(friendId);
+  };
 
   return (
-    
     <Card className="mb-4">
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center space-x-4">
@@ -99,9 +112,12 @@ const FriendCard = ({ friend }: { friend: Friend }) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              // Handle unfriend or block action here
-              console.log(`${showAlert === "unfriend" ? "Unfriended" : "Blocked"} ${friend.username}`)
-              setShowAlert(null)
+              if (showAlert === "unfriend") {
+                removeFriend(friend.id);
+              } else if (showAlert === "block") {
+                handleBlock(friend.id);
+              }
+              setShowAlert(null);
             }}>
               Confirm
             </AlertDialogAction>
@@ -112,7 +128,43 @@ const FriendCard = ({ friend }: { friend: Friend }) => {
   )
 }
 
-const SuggestionCard = ({ suggestion }: { suggestion: Suggestion }) => {
+const SuggestionCard = ({
+  suggestion,
+  sendFriendRequest,
+  acceptFriendRequest
+}: {
+  suggestion: Suggestion;
+  sendFriendRequest: (id: number) => void;
+  acceptFriendRequest: (id: number) => void;
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleButtonClick = () => {
+    setIsLoading(true);
+    if (suggestion.friendshipStatus === 'none') {
+      sendFriendRequest(suggestion.id);
+    } else if (suggestion.friendshipStatus === 'request_received') {
+      acceptFriendRequest(suggestion.id);
+    }
+    setIsLoading(false);
+  };
+
+  const renderButtonContent = () => {
+    if (suggestion.friendshipStatus === 'friend') {
+      return (
+        <span className="text-green-500 flex items-center">
+          <MessageCircle className="mr-2 h-4 w-4" />
+          Friend
+        </span>
+      );
+    } else if (suggestion.friendshipStatus === 'request_sent') {
+      return <span className="text-gray-500">Pending</span>;
+    } else if (suggestion.friendshipStatus === 'request_received') {
+      return 'Accept';
+    }
+    return 'Add Friend';
+  };
+
   return (
     <Card className="mb-4">
       <CardContent className="flex items-center justify-between p-4">
@@ -126,14 +178,20 @@ const SuggestionCard = ({ suggestion }: { suggestion: Suggestion }) => {
             <p className="text-sm text-gray-500">{suggestion.mutualFriends} mutual friends</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Friend
+        <Button
+          variant="secondary"
+          size="sm"
+          className="hover:text-green-500"
+          onClick={handleButtonClick}
+          disabled={suggestion.friendshipStatus === 'friend'}
+        >
+          {renderButtonContent()}
         </Button>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
+
 
 const SearchResultCard = ({ user, onAddFriend }: { user: User; onAddFriend: () => void }) => {
   return (
@@ -155,26 +213,31 @@ const SearchResultCard = ({ user, onAddFriend }: { user: User; onAddFriend: () =
 export default function Component() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<User[]>([])
+  const [activeModal, setActiveModal] = useState<string | null>(null)
+  
+  const {users, sendFriendRequest, friends, removeFriend, blockUser} = useContext(UserContext);
 
-  const friends: Friend[] = [
-    { id: 1, username: "Alice", photoUrl: "/placeholder.svg?height=40&width=40", course: "Computer Science" },
-    { id: 2, username: "Bob", photoUrl: "/placeholder.svg?height=40&width=40", course: "Engineering" },
-    { id: 3, username: "Charlie", photoUrl: "/placeholder.svg?height=40&width=40", course: "Mathematics" },
-  ]
+
+  const transformedUsers: Suggestion[] = users?.users?.map(user => ({
+    id: user.id,
+    username: user.username,
+    photoUrl: user.photoUrl || "/placeholder.svg?height=40&width=40", // Use a default image if none is provided
+    mutualFriends: user.mutual_friends || 0, // Default to 0 if mutualFriends is not provided
+    friendshipStatus: user.friendship_status || 'none', // Default to 'none' if friendshipStatus is not provided
+  }));
+
 
   const suggestions: Suggestion[] = [
-    { id: 1, username: "David", photoUrl: "/placeholder.svg?height=40&width=40", mutualFriends: 5 },
-    { id: 2, username: "Eve", photoUrl: "/placeholder.svg?height=40&width=40", mutualFriends: 3 },
-    { id: 3, username: "Frank", photoUrl: "/placeholder.svg?height=40&width=40", mutualFriends: 2 },
+    ...(Array.isArray(transformedUsers) && transformedUsers.length > 0 ? transformedUsers : [])
+    
   ]
 
-  const allUsers: User[] = [
-    ...friends.map(f => ({ id: f.id, username: f.username, photoUrl: f.photoUrl })),
-    ...suggestions.map(s => ({ id: s.id, username: s.username, photoUrl: s.photoUrl })),
-    { id: 4, username: "Grace", photoUrl: "/placeholder.svg?height=40&width=40" },
-    { id: 5, username: "Henry", photoUrl: "/placeholder.svg?height=40&width=40" },
-    { id: 6, username: "Ivy", photoUrl: "/placeholder.svg?height=40&width=40" },
+  const receivedRequests: FriendRequest[] = [
+    { id: 1, username: "Grace", photoUrl: "/placeholder.svg?height=40&width=40" },
+    { id: 2, username: "Henry", photoUrl: "/placeholder.svg?height=40&width=40" },
   ]
+
+
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
@@ -192,10 +255,21 @@ export default function Component() {
     console.log(`Added ${user.username} as a friend`)
     // Here you would typically update the friends list and remove from suggestions
   }
+
+  const handleAcceptRequest = (id: number) => {
+    console.log(`Accepted friend request from user with id ${id}`)
+    // Implement the logic to accept the friend request
+  }
+
+  const handleRejectRequest = (id: number) => {
+    console.log(`Rejected friend request from user with id ${id}`)
+    // Implement the logic to reject the friend request
+  }
+
   const eventLinks = [
-    { href: "/comingsoon", label: "Coming Soon", icon: <Home className="h-4 w-4" /> },
-    { href: "/social-events", label: "Social Events", icon: <Calendar className="h-4 w-4" /> },
-    { href: "/fun-events", label: "Fun Events", icon: <PartyPopper className="h-4 w-4" /> },
+    { label: "Friends", icon: <Users className="h-4 w-4" />, onClick: () => setActiveModal("friends") },
+    { label: "Suggestions", icon: <UserPlus className="h-4 w-4" />, onClick: () => setActiveModal("suggestions") },
+    { label: "Requests", icon: <Bell className="h-4 w-4" />, onClick: () => setActiveModal("requests") },
   ];
 
   return (
@@ -236,34 +310,48 @@ export default function Component() {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Friends</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {friends.map((friend) => (
-                <FriendCard key={friend.id} friend={friend} />
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>People You May Know</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {suggestions.map((suggestion) => (
-                <SuggestionCard key={suggestion.id} suggestion={suggestion} />
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+
+      <Dialog open={activeModal === "friends"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Friends</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {friends?.map((friend) => (
+              <FriendCard key={friend.id} friend={friend} removeFriend={removeFriend} blockFriend={blockUser} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeModal === "suggestions"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>People You May Know</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {suggestions?.map((suggestion) => (
+              <SuggestionCard key={suggestion.id} suggestion={suggestion} sendFriendRequest={sendFriendRequest} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={activeModal === "requests"} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Friend Requests</DialogTitle>
+          </DialogHeader>
+          <ReceivedRequestsModal
+            requests={receivedRequests}
+            onAccept={handleAcceptRequest}
+            onReject={handleRejectRequest}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
     </div>
     </div>
   )
 }
+
