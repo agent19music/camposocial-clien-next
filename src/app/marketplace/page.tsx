@@ -23,7 +23,7 @@ export default function Marketplace() {
   ];
 const {products} = useContext(MarketplaceContext)
   // Array to simulate 21 products
-  console.log(products);
+  // console.log(products);
   
 
   return (
