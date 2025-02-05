@@ -48,12 +48,15 @@ type Variation = {
 
 const ProductVariations = ({
   variations,
-  onVariationChange
+  onVariationChange,
+  selectedProduct
 }: {
   variations: Variation[];
   onVariationChange: (variation: Variation | null) => void;
 }) => {
-  const [selectedVariation, setSelectedVariation] = useState<Variation | null>(null);
+  // const [selectedVariation, setSelectedVariation] = useState<Variation | null>(null);
+  const [selectedVariation, setSelectedVariation] = useState<Variation | null>(selectedProduct.variations[0] || null);
+
 
   const variationNames = [...new Set(variations.map((v) => v.name))];
 
@@ -96,7 +99,7 @@ const ProductVariations = ({
 };
 
 export default function SingleProductPage() {
-  const { selectedProduct, setSelectedProduct, navigateToSingleSellerView } = useContext(MarketplaceContext)
+  const { selectedProduct, setSelectedProduct, navigateToSingleSellerView, setUpdateCart, updateCart } = useContext(MarketplaceContext)
   const [selectedImage, setSelectedImage] = useState("")
   const [selectedVariation, setSelectedVariation] = useState<Variation | null>(null);
   const [rating, setRating] = useState(0)
@@ -171,6 +174,7 @@ export default function SingleProductPage() {
       if (response.ok) {
         const data = await response.json()
         toast.success("Product added to cart successfully!")
+        setUpdateCart(!updateCart);
         return data // Optional: return response data if needed
       } else {
         const errorData = await response.json()
@@ -249,7 +253,8 @@ export default function SingleProductPage() {
                     </span>
                   </div>
                   <p className="text-gray-600">{selectedProduct?.description}</p>
-                  <p className="text-xl font-bold">${selectedProduct?.price.toFixed(2)}</p>
+                  {!selectedVariation&&<p className="text-xl font-bold">${selectedProduct?.variations[0].price}</p>}
+                  {selectedVariation &&<p className="text-xl font-bold">${selectedVariation?.price}</p>}
                   <p className="text-sm text-gray-500">Category: {selectedProduct?.category}</p>
                   <p className="text-sm text-gray-500">Brand: {selectedProduct?.brand}</p>
                 </>
@@ -262,7 +267,8 @@ export default function SingleProductPage() {
                 selectedProduct?.variations && (
                   <ProductVariations 
                   onVariationChange={setSelectedVariation}
-                  variations={selectedProduct.variations} />
+                  variations={selectedProduct.variations}
+                  selectedProduct={selectedProduct} />
                 )
               )}
 
