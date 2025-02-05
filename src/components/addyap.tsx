@@ -130,7 +130,7 @@ export default function AddYap() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="wide" className="rounded-md">Add Yap</Button>
+        <Button  className="rounded-md">Add Yap</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
