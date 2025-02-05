@@ -93,6 +93,8 @@ const CreateAccount: React.FC = () => {
 
     if (response.ok) {
       toast.success('Your account has been created successfully!');
+
+      router.push('/login');
    } else if (response.status === 409) {
       toast.error('Username or password already exists');
     } else if (response.status === 500) {
