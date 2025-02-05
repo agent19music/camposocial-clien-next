@@ -47,12 +47,14 @@ import AddEvent from "@/components/addevent";
 import { useContext } from "react";
 import { AuthContext } from "@/context/authcontext";
 import {toast} from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const Header: FC = () => {
   const pathname = usePathname(); // Use usePathname to get the current route
   const [activePage, setActivePage] = useState<string>("");
+  const router = useRouter()
 
-  const {currentUser} = useContext(AuthContext)
+  const {currentUser, logout} = useContext(AuthContext)
   useEffect(() => {
     if (pathname) {
       setActivePage(pathname); // Set active page based on the current route
@@ -61,6 +63,13 @@ const Header: FC = () => {
 
   function headsup (){
     toast.success('heads up !!')
+  }
+  function takeMeToLogin(){
+    router.push('/login')
+  }
+
+  function takeMeToSettings(){
+    router.push('/profilesettings')
   }
 
   const navItems = [
@@ -191,14 +200,18 @@ const Header: FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-          <DropdownMenuLabel>
-  {currentUser ? (`${currentUser.username}`) : 'Login'} 
-</DropdownMenuLabel>            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={headsup}>Settings</DropdownMenuItem>
+         
+  {currentUser ? <DropdownMenuLabel> {currentUser.username} </DropdownMenuLabel> :
+  <DropdownMenuLabel onClick={takeMeToLogin} className="hover:cursor-pointer">
+Login
+  </DropdownMenuLabel>
+}
+           <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={takeMeToSettings}>Settings</DropdownMenuItem>
             <DropdownMenuItem>Profile Info</DropdownMenuItem>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
