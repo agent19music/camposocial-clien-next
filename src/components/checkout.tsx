@@ -23,6 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { MarketplaceContext } from '@/context/marketplacecontext'
 
 interface CartItem {
   product_title: string;
@@ -64,8 +65,8 @@ export default function CheckoutComponent() {
   const [loading, setLoading] = useState<boolean>(true)
   const [showPayNow, setShowPayNow] = useState(false);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const {setOrderId, orderId} = useContext(MarketplaceContext)
 
   const handlePayNow = () => {
     setIsPaymentDialogOpen(true);
