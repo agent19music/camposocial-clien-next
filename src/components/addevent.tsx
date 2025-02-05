@@ -41,7 +41,7 @@ export default function AddEvent() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
   <DialogTrigger asChild>
-    <Button size="wide">Add Event</Button>
+    <Button >Add Event</Button>
   </DialogTrigger>
   <DialogContent className="sm:max-w-[425px] md:max-w-2xl max-h-[75vh] overflow-y-auto">
     <Card className="w-full">
